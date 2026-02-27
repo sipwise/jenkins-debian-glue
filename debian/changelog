@@ -1,3 +1,83 @@
+jenkins-debian-glue (0.23.6) unstable; urgency=medium
+
+  [ Guillem Jover ]
+  * [52c40f3] build: Mark all current targets as .PHONY
+  * [a7e6ca4] build: Split the test suite into its own check target
+  * [9552ba2] build: Do not remove Debian packaging artifacts from the
+    clean target
+  * [389076c] build: Remove target dependency on shell glob pattern
+  * [94d8184] build: Use GNU Make wildcard function instead of a raw shell
+    glob pattern
+  * [4a3f89a] build: For correctness make install and deploy depend on the
+    build target
+
+    Those changes fix the FTBFS with the nocheck build profile
+    (Closes: #1116758)
+
+ -- Michael Prokop <mika@debian.org>  Fri, 03 Oct 2025 13:42:03 +0200
+
+jenkins-debian-glue (0.23.5) unstable; urgency=medium
+
+  * [6fa08b8] jdg-tap-tool-dispatcher: fix file-list handling with
+    jdg-tap-merge-conflict
+  * [2f0ce4e] puppet: drop jenkins.grml.org usage, use j-d-g packages from
+    Debian instead
+  * [f263a20] puppet: drop Jenkins plugin support
+  * [58059f7] puppet: drop support for ancient openjdk releases
+  * [ebfa17b] puppet: update usage instructions to clarify current plugin
+    situation
+  * [2044974] d/control: Bump Standards-Version to 4.7.2
+
+ -- Michael Prokop <mika@debian.org>  Tue, 22 Apr 2025 09:46:27 +0200
+
+jenkins-debian-glue (0.23.4) unstable; urgency=medium
+
+  * [f3c55ce] tap: replace deprecated File.exists? with File.exist?
+    (Closes: #1102381)
+
+ -- Michael Prokop <mika@debian.org>  Tue, 08 Apr 2025 15:39:06 +0200
+
+jenkins-debian-glue (0.23.3) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [11da68f] tap: improve file detection
+  * [ddb1157] Makefile: add missing test
+
+ -- Michael Prokop <mika@debian.org>  Mon, 07 Apr 2025 13:10:42 +0200
+
+jenkins-debian-glue (0.23.2) unstable; urgency=medium
+
+  * d/control: replace deprecated Recommends on pep8 with pycodestyle.
+    Thanks to Alexandre Detiste (Closes: #1093162)
+  * tap/jdg-tap-pep8: check for pycodestyle by default
+  * tap/jdg-tap-tool-dispatcher: enable jdg-tap-pep8 via pycodestyle
+
+ -- Michael Prokop <mika@debian.org>  Fri, 17 Jan 2025 12:20:23 +0100
+
+jenkins-debian-glue (0.23.1) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [340773d] tap: fix missing disable-mergecheck option on getopt
+  * [91ec1c8] tap: [merge-conflict] skip directory arguments
+  * [60bc828] tap: [merge-conflict] improve merge detection
+
+ -- Michael Prokop <mika@debian.org>  Mon, 16 Sep 2024 19:01:53 +0200
+
+jenkins-debian-glue (0.23.0) unstable; urgency=medium
+
+  [ Oleh Horbachov ]
+  * [0d3b8ab] Updated jenkins PGP key
+
+  [ Victor Seva ]
+  * [0d54b7f] tap: detect merge conflicts tool
+  * [f1caf36] tap: add merge-conflict by default on tap-tool-dispatcher
+
+  [ Michael Prokop ]
+  * [c2b1d1f] Fix lintian issue with ruby-script-but-no-ruby-dep. Thanks
+    to Victor Seva for feedback
+
+ -- Michael Prokop <mika@debian.org>  Wed, 19 Jun 2024 12:01:10 +0200
+
 jenkins-debian-glue (0.22.1) unstable; urgency=medium
 
   [ Marius Gripsgard ]
