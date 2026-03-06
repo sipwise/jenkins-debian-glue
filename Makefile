@@ -2,6 +2,32 @@ PREFIX := /usr
 
 PROGRAMS := $(wildcard scripts/* tap/*)
 
+SHELL_SCRIPTS := \
+	git/post-receive \
+	pbuilder-hookdir/B20autopkgtest \
+	pbuilder-hookdir/B90lintian \
+	pbuilder-hookdir/C10shell \
+	pbuilder-hookdir/D10-man-db \
+	pbuilder-hookdir/D10aptspeedup \
+	pbuilder-hookdir/D20releaserepo \
+	puppet/apply.sh \
+	scripts/jdg-build-and-provide-package \
+	scripts/jdg-debc \
+	scripts/jdg-generate-git-snapshot \
+	scripts/jdg-generate-reprepro-codename \
+	scripts/jdg-generate-svn-snapshot \
+	scripts/jdg-increase-version-number \
+	scripts/jdg-piuparts-wrapper \
+	scripts/jdg-remove-reprepro-codename \
+	scripts/jdg-repository-checker \
+	svn/post-commit \
+	svn/trigger_jenkins \
+	tap/jdg-tap-tool-dispatcher \
+	tests/file-detection \
+	tests/increase-version-number \
+	tests/merge-conflict \
+	# EOL
+
 all: build
 
 build:
@@ -10,6 +36,9 @@ check: build
 	tests/merge-conflict
 	tests/increase-version-number
 	tests/file-detection
+
+shellcheck:
+	shellcheck $(SHELL_SCRIPTS)
 
 install: build
 	mkdir -p $(DESTDIR)/$(PREFIX)/bin/
@@ -35,4 +64,4 @@ deploy: build
 clean:
 	rm -f fabfile.pyc
 
-.PHONY: all build check install uninstall deploy clean
+.PHONY: all build check install uninstall deploy clean shellcheck
