@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2317  # Functions are called by shunit2 framework
 
 SCRIPT=./tap/jdg-tap-merge-conflict
 
@@ -11,12 +12,12 @@ OK_FILE=./tests/fixtures/merge-conflict/ok.txt
 
 testDetection()
 {
-  assertEquals "$($SCRIPT $KO_FILE)" "$KO_OUT"
+  assertEquals "$("$SCRIPT" "$KO_FILE")" "$KO_OUT"
 }
 
 testPass()
 {
-  assertEquals "$($SCRIPT $OK_FILE)" ""
+  assertEquals "$("$SCRIPT" "$OK_FILE")" ""
 }
 
 testDir()
@@ -24,6 +25,7 @@ testDir()
   assertEquals "$($SCRIPT /tmp 2>&1)" "/tmp is a directory. Ignoring."
 }
 
+# shellcheck disable=SC1091
 . /usr/share/shunit2/shunit2
 
 # vim:foldmethod=marker ts=2 ft=sh ai expandtab sw=2

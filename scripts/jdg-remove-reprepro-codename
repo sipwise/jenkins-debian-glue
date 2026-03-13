@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z ${JENKINS_DEBIAN_GLUE_QUIET:-} ]; then
+if [ -z "${JENKINS_DEBIAN_GLUE_QUIET:-}" ]; then
   set -x
 fi
 set -e
@@ -13,6 +13,7 @@ else
 fi
 
 if [ -r /etc/jenkins/debian_glue ] ; then
+  # shellcheck source=examples/debian_glue
   . /etc/jenkins/debian_glue
 fi
 
@@ -42,6 +43,11 @@ if [ -z "${REPREPRO_OPTS:-}" ]  ; then
   REPREPRO_OPTS='--waitforlock 1000 -v'
 fi
 
+run_reprepro() {
+  read -r -a reprepro_opts <<< "${REPREPRO_OPTS}"
+  ${SUDO_CMD:-} "${REPREPRO_CMD}" "${reprepro_opts[@]}" "$@"
+}
+
 if [ "$#" -lt 1 ] ; then
   echo "Usage: $0 <codename>" >&2
   exit 1
@@ -63,7 +69,7 @@ echo "*** Removing codename $codename from reprepro configuration in $REPOSITORY
 perl -i -00 -pe "if (!\$done && m|$codename|) { \$_=q(); \$done++}" "${REPOSITORY}/conf/distributions"
 
 echo "*** Removing vanished data from reprepro ***"
-${REPREPRO_CMD} $REPREPRO_OPTS -b "$REPOSITORY" --delete clearvanished
+run_reprepro -b "$REPOSITORY" --delete clearvanished
 
 echo "*** Removing package indices files (${REPOSITORY}/dists/${codename}) ***"
 rm -rf "${REPOSITORY}/dists/${codename}"

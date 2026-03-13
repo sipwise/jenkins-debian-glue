@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z ${JENKINS_DEBIAN_GLUE_QUIET:-} ]; then
+if [ -z "${JENKINS_DEBIAN_GLUE_QUIET:-}" ]; then
   set -x
 fi
 set -e
@@ -9,7 +9,7 @@ bailout() {
   [ -n "${1:-}" ] && EXIT="${1}" || EXIT=0
   [ -n "${2:-}" ] && echo "$2" >&2
   rm -f /var/lock/jdg-generate-reprepro-codename."$(id -un)"
-  exit $EXIT
+  exit "${EXIT}"
 }
 
 # backwards compatibility, see PR#94
@@ -21,6 +21,7 @@ fi
 
 if [ -r /etc/jenkins/debian_glue ] ; then
   echo "*** Sourcing /etc/jenkins/debian_glue ***"
+  # shellcheck source=examples/debian_glue
   . /etc/jenkins/debian_glue
 fi
 
@@ -124,7 +125,7 @@ if ! mkdir -p "${REPOSITORY}"/conf ; then
   exit 1
 fi
 
-if ! chown $(id -un) "${REPOSITORY}"/conf ; then
+if ! chown "$(id -un)" "${REPOSITORY}"/conf ; then
   echo "*** Warning: failed to adjust permissions of ${REPOSITORY}/conf ***"
   echo "*** This might be caused by a remote FS like sshfs, so not failing the build. ***"
   echo "*** Please fix the underlying problem if you depend on according permissions. ***"
@@ -156,30 +157,30 @@ Components: ${COMPONENTS}
 EOF
 
 if [ -n "${SUITE:-}" ]; then
-  printf "Suite: ${SUITE}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "Suite: %s\n" "${SUITE}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 if [ -n "${LABEL:-}" ]; then
-  printf "Label: ${LABEL}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "Label: %s\n" "${LABEL}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 if [ -n "${VERSION:-}" ]; then
-  printf "Version: ${VERSION}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "Version: %s\n" "${VERSION}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 if [ -n "${ORIGIN:-}" ]; then
-  printf "Origin: ${ORIGIN}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "Origin: %s\n" "${ORIGIN}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 if [ -n "${UDEB_COMPONENTS:-}" ]; then
-  printf "UDebComponents: ${UDEB_COMPONENTS}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "UDebComponents: %s\n" "${UDEB_COMPONENTS}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 printf "Tracking: minimal\n" >> "${REPOSITORY}"/conf/distributions
 
 if [ -n "${KEY_ID:-}" ] ; then
   echo "*** Signing repository with Key ID $KEY_ID ***"
-  printf "SignWith: ${KEY_ID}\n" >> "${REPOSITORY}"/conf/distributions
+  printf "SignWith: %s\n" "${KEY_ID}" >> "${REPOSITORY}"/conf/distributions
 fi
 
 echo "Added $REPOS as new codename/repos to the reprepro configuration."

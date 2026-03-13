@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2317  # Functions are called by shunit2 framework
 
 SCRIPT=./tap/jdg-tap-shellcheck
 SCRIPT_KO=./tap/jdg-tap-perlcritic
@@ -10,14 +11,15 @@ PATH="${FAKE_PATH}:${PATH}"
 
 testOK()
 {
-  assertEquals "1..0" "$(PATH="${PATH}" $SCRIPT $FILE)"
+  assertEquals "1..0" "$(PATH="${PATH}" "$SCRIPT" "$FILE")"
 }
 
 testDetection()
 {
-  assertEquals "$NOT_PERL" "$(PATH="${PATH}" $SCRIPT_KO $FILE 2>&1)"
+  assertEquals "$NOT_PERL" "$(PATH="${PATH}" "$SCRIPT_KO" "$FILE" 2>&1)"
 }
 
+# shellcheck disable=SC1091
 . /usr/share/shunit2/shunit2
 
 # vim:foldmethod=marker ts=2 ft=sh ai expandtab sw=2

@@ -39,12 +39,18 @@ else
   BUILD_DIR="/tmp/buildd" # pbuilder <0.216
 fi
 
-cd "${BUILD_DIR}"/*/debian/..
-ID="$(basename $PWD)"
+if ! cd "${BUILD_DIR}"/*/debian/.. ; then
+  cat >&2 <<EOF
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │  Error: could not change directory to <build-dir>/*/debian/..                │
+  └──────────────────────────────────────────────────────────────────────────────┘
+EOF
+  exit 1
+fi
+ID="$(basename "$PWD")"
 
 touch /testfile.$$
-BUILD=/var/cache/pbuilder/build/*/testfile.$$
-BUILD=$(dirname $BUILD)
+BUILD=$(dirname /var/cache/pbuilder/build/*/testfile.$$)
 
 cat <<EOF
   ┌──────────────────────────────────────────────────────────────────────────────┐

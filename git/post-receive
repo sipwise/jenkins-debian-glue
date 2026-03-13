@@ -8,8 +8,8 @@ token=ADJUSTME
 
 trigger_jenkins()
 {
-  oldrev=$(git rev-parse $1)
-  newrev=$(git rev-parse $2)
+  oldrev=$(git rev-parse "$1")
+  newrev=$(git rev-parse "$2")
   refname="$3"
 
   if expr "$oldrev" : '0*$' >/dev/null ; then
@@ -23,11 +23,9 @@ trigger_jenkins()
   fi
 
   newrev_type=$(git cat-file -t "$newrev" 2> /dev/null)
-  oldrev_type=$(git cat-file -t "$oldrev" 2> /dev/null)
 
   case "$change_type" in
     create|update)
-      rev="$newrev"
       rev_type="$newrev_type"
       ;;
     delete)
@@ -38,7 +36,6 @@ trigger_jenkins()
   case "$refname","$rev_type" in
     refs/heads/*,commit)
       # branch
-      refname_type="branch"
       branch_name=${refname##refs/heads/}
       ;;
   esac
@@ -64,10 +61,10 @@ trigger_jenkins()
 }
 
 if [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ]; then
-  trigger_jenkins $2 $3 $1
+  trigger_jenkins "$2" "$3" "$1"
 else
-  while read oldrev newrev refname; do
-    trigger_jenkins $oldrev $newrev $refname
+  while read -r oldrev newrev refname; do
+    trigger_jenkins "$oldrev" "$newrev" "$refname"
   done
 fi
 

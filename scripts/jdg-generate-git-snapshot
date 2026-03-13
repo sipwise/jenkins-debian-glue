@@ -1,16 +1,17 @@
 #!/bin/bash
 
-if [ -z ${JENKINS_DEBIAN_GLUE_QUIET:-} ]; then
+if [ -z "${JENKINS_DEBIAN_GLUE_QUIET:-}" ]; then
   set -x
 fi
 set -e
 set -u
 
 if [ -r /etc/jenkins/debian_glue ] ; then
+  # shellcheck source=examples/debian_glue
   . /etc/jenkins/debian_glue
 fi
 
-[ -n "${DEBEMAIL:-}" ] || DEBEMAIL="jenkins-debian-glue Autobuilder <jenkins@`hostname -f`>"
+[ -n "${DEBEMAIL:-}" ] || DEBEMAIL="jenkins-debian-glue Autobuilder <jenkins@$(hostname -f)>"
 export DEBEMAIL
 
 [ -n "${SOURCE_DIRECTORY:-}" ] || SOURCE_DIRECTORY='source' # where checkout of sources resides
@@ -45,7 +46,7 @@ if [ -n "${JENKINS_DEBIAN_GLUE_VERSION:-}" ] ; then
   echo "*** Running jenkins-debian-glue version $JENKINS_DEBIAN_GLUE_VERSION ***"
 fi
 
-if [ -n "${DIST:-}" -a -z "${KEEP_SOURCE_CHANGES:-}" ]; then
+if [ -n "${DIST:-}" ] && [ -z "${KEEP_SOURCE_CHANGES:-}" ]; then
   echo "*** Warning: DIST is set but KEEP_SOURCE_CHANGES is not, this doesn't make sense. ***"
   echo "*** Please consider setting KEEP_SOURCE_CHANGES=true when setting DIST. ***"
 
@@ -84,7 +85,7 @@ version_information() {
     # we want to get a version string like
     # $ORIG_VERSION+0~$TIMESTAMP.$BUILD_NUMBER~1.$GIT_ID
     # so the version is always increasing over time, no matter what
-    INCREASED_VERSION=$(jdg-increase-version-number $ORIG_VERSION)
+    INCREASED_VERSION=$(jdg-increase-version-number "$ORIG_VERSION")
     if [ -n "${TIMESTAMP_FORMAT:-}" ] ; then
       echo "*** Using custom timestamp format as specified by TIMESTAMP_FORMAT ***"
       TIMESTAMP="$(date -u +"$TIMESTAMP_FORMAT")"
@@ -170,19 +171,19 @@ gbp_conf() {
   PRISTINE_TAR="false"
 
   for gbp_conf_file in "${gbp_conf_files[@]}"; do
-    if [ -f ${gbp_conf_file} ]; then
+    if [ -f "${gbp_conf_file}" ]; then
       local value;
-      value=$(git config --file ${gbp_conf_file} --get DEFAULT.upstream-branch 2>&- || true)
+      value=$(git config --file "${gbp_conf_file}" --get DEFAULT.upstream-branch 2>&- || true)
       if [ -n "${value:-}" ]; then
         UPSTREAM_BRANCH=${value}
       fi
 
-      value=$(git config --file ${gbp_conf_file} --get DEFAULT.debian-branch 2>&- || true)
+      value=$(git config --file "${gbp_conf_file}" --get DEFAULT.debian-branch 2>&- || true)
       if [ -n "${value:-}" ]; then
         DEBIAN_BRANCH=${value}
       fi
 
-      value=$(git config --file ${gbp_conf_file} --bool --get DEFAULT.pristine-tar 2>&- || true)
+      value=$(git config --file "${gbp_conf_file}" --bool --get DEFAULT.pristine-tar 2>&- || true)
       if [ -n "${value:-}" ]; then
         PRISTINE_TAR=${value}
       fi
@@ -206,9 +207,10 @@ create_local_branch() {
 git_dch_auto() {
   if $APPLY_VERSION_WORKAROUND ; then
     echo "Applying version workaround workaround"
-    dch -b --distribution=UNRELEASED --newversion=$VERSION_STRING -- \
+    dch -b --distribution=UNRELEASED --newversion="$VERSION_STRING" -- \
       "SNAPSHOT autobuild for unreleased $ORIG_VERSION via jenkins-debian-glue."
   else
+    # shellcheck disable=SC2086
     ${GBP_DCH} --auto $DCH_COMBINED_OPTS ${DCH_CHANGELOG_FILE:-}
   fi
 }
@@ -217,33 +219,40 @@ identify_latest_change() {
   # debian/changelog might be a symlink (e.g. because debian points to
   # pkg/debian), so make sure we don't access a non-existing file
   # by calling readlink
-  git checkout -- $(readlink -f debian/changelog)
+  git checkout -- "$(readlink -f debian/changelog)"
 
-  local OLD_VERSION=$(dpkg-parsechangelog | awk '/^Version: / {print $2}')
+  local OLD_VERSION
+  OLD_VERSION=$(dpkg-parsechangelog | awk '/^Version: / {print $2}')
 
-  local last_tag=$(git describe $(git rev-list --tags='[^u]*' --max-count=1 HEAD))
-  local last_merge=$(git describe $(git rev-list --all --merges --max-count=1 HEAD))
+  local last_tag
+  last_tag=$(git describe "$(git rev-list --tags='[^u]*' --max-count=1 HEAD)")
+  local last_merge
+  last_merge=$(git describe "$(git rev-list --all --merges --max-count=1 HEAD)")
   local since=${last_tag}
 
   if [ -n "$last_merge" ] ; then
-    local merge_date=$(git log ${last_merge} --pretty="format:%at" -1)
-    local tag_date=$(git log ${last_tag} --pretty="format:%at" -1)
-    if [ ${merge_date} -gt ${tag_date} ] ; then
-      local since=${last_merge}
+    local merge_date
+    merge_date=$(git log "${last_merge}" --pretty="format:%at" -1)
+    local tag_date
+    tag_date=$(git log "${last_tag}" --pretty="format:%at" -1)
+    if [ "${merge_date}" -gt "${tag_date}" ] ; then
+      since=${last_merge}
     fi
   fi
 
   echo "Latest tag [${last_tag:-}] / merge [${last_merge:-}] seems to be $since"
+  # shellcheck disable=SC2086
   ${GBP_DCH} -s "${since}" $DCH_COMBINED_OPTS ${DCH_CHANGELOG_FILE:-}
 
-  local NEW_VERSION=$(dpkg-parsechangelog | awk '/^Version: / {print $2}')
+  local NEW_VERSION
+  NEW_VERSION=$(dpkg-parsechangelog | awk '/^Version: / {print $2}')
 
   if dpkg --compare-versions "$NEW_VERSION" lt "$OLD_VERSION" ; then
     echo "Calculated version is older than last release, falling back to auto mode."
     # debian/changelog might be a symlink (e.g. because debian points to
     # pkg/debian), so make sure we don't access a non-existing file
     # by calling readlink
-    git checkout -- $(readlink -f debian/changelog)
+    git checkout -- "$(readlink -f debian/changelog)"
 
     git_dch_auto
   fi
@@ -269,7 +278,7 @@ branch_checkout() {
     git branch -D "$random_branch" || true
 
     echo "*** Fetching Gerrit patchsets/commits from ${GIT_URL} ***"
-    git fetch --tags --progress ${GIT_URL} +refs/changes/*:refs/remotes/origin/*
+    git fetch --tags --progress "${GIT_URL}" +refs/changes/*:refs/remotes/origin/*
 
     echo "Checking out branch $random_branch based on Gerrit patchset revision ${GERRIT_PATCHSET_REVISION} ***"
     git checkout -b "$random_branch" "$GERRIT_PATCHSET_REVISION"
@@ -312,6 +321,7 @@ branch_checkout() {
   fi
 }
 
+# shellcheck disable=SC2120  # function supports optional argument
 changelog_generation() {
   # Allow skipping of changelog creation, e.g. to build a branch as-is
   if [ "${SKIP_DCH:-}" = "true" ] ; then
@@ -322,7 +332,7 @@ changelog_generation() {
     elif [ "${1:-}" = "identify" ] ; then
       echo "Trying to identify latest tag / merge..."
 
-      if ! git describe $(git rev-list --tags='[^u]*' --max-count=1 HEAD) >/dev/null ; then
+      if ! git describe "$(git rev-list --tags='[^u]*' --max-count=1 HEAD)" >/dev/null ; then
         echo "Failed to identify latest change, falling back to auto mode."
         git_dch_auto
       else
@@ -339,11 +349,11 @@ changelog_generation() {
     # get rid of "UNRELEASED" distribution header, only
     # necessary if the debian/changelog was modified
     if [ -z "${tag:-}" ]; then
-      local debchange_opts
+      declare -a debchange_opts
       if [ -n "${DIST:-}" ]; then
-        debchange_opts="--distribution ${DIST} --force-distribution"
+        debchange_opts+=("--distribution" "${DIST}" "--force-distribution")
       fi
-      debchange --release ${debchange_opts:-} ""
+      debchange --release "${debchange_opts[@]}" ""
     fi
   fi
 }
@@ -404,7 +414,8 @@ source_format_opts() {
     return 0
   fi
 
-  local SRC_FORMAT="$(cat debian/source/format)"
+  local SRC_FORMAT
+  SRC_FORMAT="$(cat debian/source/format)"
 
   case "$SRC_FORMAT" in
     '3.0 (quilt)')
@@ -444,7 +455,7 @@ fi
 
 if [ -n "${PRE_SOURCE_HOOK:-}" ] ; then
   echo "*** Found environment variable PRE_SOURCE_HOOK, set to ${PRE_SOURCE_HOOK:-} ***"
-  sh ${PRE_SOURCE_HOOK:-}
+  sh "${PRE_SOURCE_HOOK}"
 fi
 
 cd "$SOURCE_DIRECTORY"
@@ -459,9 +470,9 @@ if [ "${IGNORE_GIT_BUILDPACKAGE:-}" != "true" ] ; then
 	gbp_conf
 
 	# make sure common branches are available for git-buildpackage
-	create_local_branch ${UPSTREAM_BRANCH}
-	create_local_branch ${DEBIAN_BRANCH}
-	if [ ${PRISTINE_TAR} = 'true' ]; then
+	create_local_branch "${UPSTREAM_BRANCH}"
+	create_local_branch "${DEBIAN_BRANCH}"
+	if [ "${PRISTINE_TAR}" = 'true' ]; then
 	  create_local_branch pristine-tar
 	fi
 fi
@@ -471,7 +482,7 @@ branch_checkout
 
 if [ -n "${PRE_DCH_HOOK:-}" ] ; then
   echo "*** Found environment variable PRE_DCH_HOOK, set to ${PRE_DCH_HOOK:-} ***"
-  sh ${PRE_DCH_HOOK:-}
+  sh "${PRE_DCH_HOOK}"
 fi
 
 # retrieve version information *after* checking out the according branch/tag,
@@ -480,6 +491,7 @@ version_information
 
 # handling of debian/changelog
 dch_opts
+# shellcheck disable=SC2119  # intentionally called without argument
 changelog_generation
 
 # prepare orig.tar.gz using pristine-tar, but without actually building the source package
@@ -487,6 +499,7 @@ if [ "${IGNORE_GIT_BUILDPACKAGE:-}" = "true" ] ; then
   echo "Skipping git-buildpackage execution as requested via IGNORE_GIT_BUILDPACKAGE ***"
 else
   gbp_opts # set $GBP_OPTS
+  # shellcheck disable=SC2086
   ${GBP_BUILDPACKAGE} ${GBP_OPTS:-}
 fi
 
@@ -494,6 +507,7 @@ quilt_cleanup
 
 # build source package, run before switching back to previous branch
 # to get the actual requested version
+# shellcheck disable=SC2086
 dpkg-buildpackage -uc -us -nc -d -S ${DBP_OPTS:-} ${DBP_EXTRA_OPTS:-}
 
 if [ -n "${KEY_ID:-}" ] ; then
@@ -517,7 +531,7 @@ else
 fi
 
 # revert to original debian/changelog to avoid merge conflicts
-git checkout -- $(readlink -f debian/changelog)
+git checkout -- "$(readlink -f debian/changelog)"
 
 # switch back to previous "branch" before removing the tmp branch
 if ! git checkout -f "${GIT_BRANCH}"; then

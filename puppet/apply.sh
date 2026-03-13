@@ -1,7 +1,7 @@
 #!/bin/bash
 
 start_seconds=$(sed -e 's/^\([0-9]*\).*/\1/' < /proc/uptime)
-[ -n "$start_seconds" ] && SECONDS="$[$(sed -e 's/^\([0-9]*\).*/\1/' < /proc/uptime)-$start_seconds]" || SECONDS="unknown"
+[ -n "$start_seconds" ] && SECONDS="$(( $(sed -e 's/^\([0-9]*\).*/\1/' < /proc/uptime) - start_seconds))" || SECONDS="unknown"
 
 if [ -r /var/lib/jenkins/config.xml ] ; then
   echo "NOTE: Configuration file /var/lib/jenkins/config.xml exists already."
@@ -16,7 +16,8 @@ fi
 
 # workaround for puppet's facter, which looks at `uname -m` (reporting e.g. aarch64)
 # while `dpkg --print-architecture` reports arm64
-export FACTER_JDG_DEBIAN_ARCH="$(dpkg --print-architecture)"
+FACTER_JDG_DEBIAN_ARCH="$(dpkg --print-architecture)"
+export FACTER_JDG_DEBIAN_ARCH
 
 if [ -z "${FACTER_JDG_DEBIAN_ARCH:-}" ] ; then
   echo "Error reporting Debian architecture (via 'dpkg --print-architecture')" >&2
@@ -52,7 +53,8 @@ fi
 
 # neither using EC2 nor GCE? use a fallback then
 if [ -z "$IP" ] ; then
-  IP=$(ip addr show dev $(route -n | awk '/^0\.0\.0\.0/{print $NF}') | awk '/inet / {print $2}' | head -1 |sed "s;/.*;;")
+  # shellcheck disable=SC2046
+  IP=$(ip addr show dev "$(route -n | awk '/^0\.0\.0\.0/{print $NF}')" | awk '/inet / {print $2}' | head -1 | sed "s;/.*;;")
 fi
 
 if [[ "$(hostname -f 2>/dev/null)" == "" ]] ; then
@@ -94,7 +96,7 @@ if puppet apply jenkins_debian_glue.pp ; then
     exit 1
   fi
 
-  [ -n "$start_seconds" ] && SECONDS="$[$(sed -e 's/^\([0-9]*\).*/\1/' < /proc/uptime)-$start_seconds]" || SECONDS="unknown"
+  [ -n "$start_seconds" ] && SECONDS="$(( $(sed -e 's/^\([0-9]*\).*/\1/' < /proc/uptime) - start_seconds))" || SECONDS="unknown"
   echo "jenkins-debian-glue deployment finished after ${SECONDS} seconds."
 else
   echo "Fatal error during puppet run. :(" >&2

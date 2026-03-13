@@ -69,6 +69,7 @@ mkdir -p /tmp/buildd/autopkgtest.out
 
 if [ -x /usr/bin/autopkgtest ]; then
   # new autopkgtest interface
+  # shellcheck disable=SC2086
   $newpid_name "$AUTOPKG_BINARY" \
     ${OUTPUT_OPTION} /tmp/buildd/autopkgtest.out \
     --summary /tmp/buildd/autopkgtest.summary \
@@ -77,6 +78,7 @@ if [ -x /usr/bin/autopkgtest ]; then
     ${ADT_OPTIONS:-} -- null || EXIT=$?
 else
   # old adt interface
+  # shellcheck disable=SC2086
   $newpid_name "$AUTOPKG_BINARY" \
     ${OUTPUT_OPTION} /tmp/buildd/autopkgtest.out \
     --summary /tmp/buildd/autopkgtest.summary \
@@ -88,11 +90,11 @@ fi
 # collect autopkgtest output in a single file so pbuilder automatically copies it
 tar acf /tmp/buildd/autopkgtest.tar.gz /tmp/buildd/autopkgtest.out
 
-case ${EXIT:-0} in
+case "${EXIT:-0}" in
   2|4|6|8) # let jdg-tap-adtsummary report the failure
     exit 0
     ;;
   *)
-    exit ${EXIT:-0}
+    exit "${EXIT:-0}"
     ;;
 esac

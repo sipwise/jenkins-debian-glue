@@ -11,6 +11,7 @@ else
 fi
 
 if [ -r /etc/jenkins/debian_glue ] ; then
+  # shellcheck source=examples/debian_glue
   . /etc/jenkins/debian_glue
 fi
 
@@ -40,12 +41,17 @@ if [ -z "${REPREPRO_OPTS:-}" ]  ; then
   REPREPRO_OPTS='--waitforlock 1000 -v'
 fi
 
+run_reprepro() {
+  read -r -a reprepro_opts <<< "${REPREPRO_OPTS}"
+  ${SUDO_CMD:-} "${REPREPRO_CMD}" "${reprepro_opts[@]}" "$@"
+}
+
 LOGFILE=$(mktemp)
 
 bailout() {
   [ -n "${1:-}" ] && EXITCODE="$1" || EXITCODE=1
   rm -f "$LOGFILE"
-  exit $EXITCODE
+  exit "${EXITCODE}"
 }
 
 usage() {
@@ -89,7 +95,7 @@ validate-incoming() {
     return 0
   fi
 
-  for directory in $(awk '/IncomingDir: / {print $2}' "${REPOSITORY}/conf/incoming") ; do
+  while IFS= read -r directory; do
     incoming="${REPOSITORY}/${directory}"
 
     if ! [ -d "$incoming" ] ; then
@@ -104,7 +110,7 @@ validate-incoming() {
     else
       echo "Nothing found. Good."
     fi
-  done
+  done < <(awk '/IncomingDir: / {print $2}' "${REPOSITORY}/conf/incoming")
 
   return $rc
 }
@@ -120,7 +126,7 @@ _remove_epoch() {
 _skip_package() {
   local p
   for p in $1; do
-    [[ $p = $2 ]] && return 0
+    [[ $p = "$2" ]] && return 0
   done
   return 1
 }
@@ -128,25 +134,28 @@ _skip_package() {
 validate-source-bin-versions() {
   rc=0
 
-  for repository in $(awk '/^Codename: / {print $2}' "${REPOSITORY}"/conf/distributions 2>"${LOGFILE}") ; do
-    for sourcepackage in $(${REPREPRO_CMD} $REPREPRO_OPTS -A source -b "${REPOSITORY}" --list-format='${package}\n' list $repository 2>"${LOGFILE}") ; do
+  while IFS= read -r repository; do
+    # shellcheck disable=SC2016
+    for sourcepackage in $(run_reprepro -A source -b "${REPOSITORY}" --list-format='${package}\n' list "${repository}" 2>"${LOGFILE}") ; do
       if $_opt_validate_skip_package && _skip_package "${SKIP_PACKAGE}" "$sourcepackage" ; then
         echo "skipping: $sourcepackage"
         continue
       fi
-      sourceversion=$(${REPREPRO_CMD} $REPREPRO_OPTS -A source -b "${REPOSITORY}" --list-format='${version}\n' list $repository $sourcepackage 2>"${LOGFILE}")
-      for binarypackage in $(${REPREPRO_CMD} $REPREPRO_OPTS -b "${REPOSITORY}" --list-format='${package}\n' -T deb listfilter "$repository" "\$Source (==$sourcepackage)" 2>"${LOGFILE}") ; do
+      # shellcheck disable=SC2016
+      sourceversion=$(run_reprepro -A source -b "${REPOSITORY}" --list-format='${version}\n' list "${repository}" "${sourcepackage}" 2>"${LOGFILE}")
+      for binarypackage in $(run_reprepro -b "${REPOSITORY}" --list-format='${package}\n' -T deb listfilter "${repository}" "\$Source (==${sourcepackage})" 2>"${LOGFILE}") ; do
 
         if $_opt_validate_skip_package && _skip_package "${SKIP_PACKAGE}" "$binarypackage" ; then
           echo "skipping: $binarypackage"
           continue
         fi
 
-        archversion=$(${REPREPRO_CMD} $REPREPRO_OPTS -A amd64 -b "${REPOSITORY}" --list-format='${version}\n' list $repository $binarypackage 2>"${LOGFILE}")
+        # shellcheck disable=SC2016
+        archversion=$(run_reprepro -A amd64 -b "${REPOSITORY}" --list-format='${version}\n' list "${repository}" "${binarypackage}" 2>"${LOGFILE}")
 
         if $_opt_version_remove_epoch ; then
-          sourceversion=$(_remove_epoch $sourceversion)
-          archversion=$(_remove_epoch $archversion)
+          sourceversion=$(_remove_epoch "${sourceversion}")
+          archversion=$(_remove_epoch "${archversion}")
         fi
 
         if [ -z "$archversion" ] && [ -n "$sourceversion" ] ; then
@@ -169,7 +178,7 @@ validate-source-bin-versions() {
 
       done
     done
-  done
+  done < <(awk '/^Codename: / {print $2}' "${REPOSITORY}"/conf/distributions 2>"${LOGFILE}")
 
   return $rc
 }
@@ -180,8 +189,7 @@ trap bailout SIGHUP SIGINT SIGQUIT SIGABRT SIGALRM SIGTERM
 # command line handling
 CMDLINE_OPTS=list-package:,list-binary-package:,list-binary-repos:,list-repos:,list-source-package:,list-source-repos:,repository:,,help,validate-incoming,validate-source-bin-versions,version,version-remove-epoch,validate-skip-package:
 
-_opt_temp=$(getopt --name jdg-repository-checker -o +vhV --long $CMDLINE_OPTS -- "$@")
-if [ $? -ne 0 ]; then
+if ! _opt_temp=$(getopt --name jdg-repository-checker -o +vhV --long $CMDLINE_OPTS -- "$@") ; then
   echo "Try '$0 --help' for more information." >& 2
   exit 1
 fi
@@ -259,32 +267,32 @@ fi
 
 # main execution
 if $_opt_list_packages ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" ls "${PACKAGE}"
+  run_reprepro -b "${REPOSITORY}" ls "${PACKAGE}"
   bailout 0
 fi
 
 if $_opt_list_source_package ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" -A source ls "${PACKAGE}"
+  run_reprepro -b "${REPOSITORY}" -A source ls "${PACKAGE}"
   bailout 0
 fi
 
 if $_opt_list_binary_package ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" -T deb ls "${PACKAGE}"
+  run_reprepro -b "${REPOSITORY}" -T deb ls "${PACKAGE}"
   bailout 0
 fi
 
 if $_opt_list_repos ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" list "${REPOS}"
+  run_reprepro -b "${REPOSITORY}" list "${REPOS}"
   bailout 0
 fi
 
 if $_opt_list_source_repos ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" -A source list "${REPOS}"
+  run_reprepro -b "${REPOSITORY}" -A source list "${REPOS}"
   bailout 0
 fi
 
 if $_opt_list_binary_repos ; then
-  ${REPREPRO_CMD} ${REPREPRO_OPTS} -b "${REPOSITORY}" -T deb list "${REPOS}"
+  run_reprepro -b "${REPOSITORY}" -T deb list "${REPOS}"
   bailout 0
 fi
 

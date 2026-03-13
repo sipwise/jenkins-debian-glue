@@ -44,7 +44,7 @@ if [ -n "${PIUPARTS_TMPDIR:-}" ] ; then
 fi
 
 create_base_tgz() {
-  [ -r /var/cache/pbuilder/base-${distribution}-${architecture}.tgz ] && return 0
+  [ -r "/var/cache/pbuilder/base-${distribution}-${architecture}.tgz" ] && return 0
 
   if [ -n "${MIRROR:-}" ] ; then
     echo "*** MIRROR variable is set [$MIRROR], using it ***"
@@ -75,6 +75,7 @@ create_base_tgz() {
     echo "*** DEBOOTSTRAP_OPTIONS is set [$DEBOOTSTRAP_OPTIONS], using for debootstrapping ***"
   fi
 
+  # shellcheck disable=SC2086
   debootstrap --variant=minbase \
               --components="$components" \
               --arch="$architecture" \
@@ -85,7 +86,7 @@ create_base_tgz() {
 
   (
     cd "$tmpdir"
-    tar acf /var/cache/pbuilder/base-${distribution}-${architecture}.tgz *
+    tar acf "/var/cache/pbuilder/base-${distribution}-${architecture}.tgz" ./*
     rm -rf ./*
   )
 }
@@ -108,13 +109,14 @@ if piuparts --help 2>/dev/null | grep -q -- '--skip-logrotatefiles-test' ; then
 fi
 
 piuparts_version=$(piuparts --version 2>/dev/null | awk '{print $2}')
-if dpkg --compare-versions $piuparts_version lt 0.43 ; then
+if dpkg --compare-versions "${piuparts_version}" lt 0.43 ; then
   echo "*************************************************************************"
   echo "*** WARNING - piuparts version $piuparts_version is not recent enough ***"
   echo "*** You might run into problems, please consider upgrading piuparts   ***"
   echo "*************************************************************************"
 fi
 
+# shellcheck disable=SC2086
 piuparts \
   -d "${distribution}" \
   ${warn_on_leftovers_after_purge_option:-} \
