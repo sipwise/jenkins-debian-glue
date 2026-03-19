@@ -1253,7 +1253,13 @@ autopkgtest_results
 
 if [ -n "${POST_BUILD_HOOK:-}" ] ; then
   echo "*** Found environment variable POST_BUILD_HOOK, set to ${POST_BUILD_HOOK:-} ***"
-  sh "${POST_BUILD_HOOK}"
+  if [ -x "$POST_BUILD_HOOK" ] ; then
+    echo "*** Executing ${POST_BUILD_HOOK} *** "
+    "${POST_BUILD_HOOK}"
+  else
+    echo "*** Executing bash ${POST_BUILD_HOOK} *** "
+    bash "${POST_BUILD_HOOK}"
+  fi
 fi
 
 bailout 0
